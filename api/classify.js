@@ -1,6 +1,5 @@
-const tf = require('@tensorflow/tfjs-node');
+const tf = require('@tensorflow/tfjs');
 const nsfw = require('nsfwjs');
-const fetch = require('node-fetch');
 
 let model;
 
@@ -9,6 +8,32 @@ async function loadModel() {
     model = await nsfw.load();
   }
   return model;
+}
+
+// 将图片 URL 或 base64 转换为 Image 对象
+async function loadImage(imageData) {
+  // 动态导入 canvas（仅在需要时加载）
+  const { createCanvas, loadImage: canvasLoadImage } = require('canvas');
+  
+  let img;
+  
+  if (imageData.startsWith('http://') || imageData.startsWith('https://')) {
+    // URL 格式
+    img = await canvasLoadImage(imageData);
+  } else {
+    // Base64 格式
+    const base64Data = imageData.startsWith('data:') 
+      ? imageData 
+      : `data:image/jpeg;base64,${imageData}`;
+    img = await canvasLoadImage(base64Data);
+  }
+  
+  // 创建 canvas 并绘制图片
+  const canvas = createCanvas(img.width, img.height);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  
+  return canvas;
 }
 
 module.exports = async (req, res) => {
@@ -45,33 +70,11 @@ module.exports = async (req, res) => {
     // 加载模型
     const nsfwModel = await loadModel();
 
-    let imageBuffer;
-
-    // 处理不同的图片输入格式
-    if (image.startsWith('http://') || image.startsWith('https://')) {
-      // URL 格式
-      const response = await fetch(image);
-      if (!response.ok) {
-        throw new Error('无法获取图片');
-      }
-      imageBuffer = await response.buffer();
-    } else if (image.startsWith('data:image')) {
-      // Base64 格式
-      const base64Data = image.split(',')[1];
-      imageBuffer = Buffer.from(base64Data, 'base64');
-    } else {
-      // 假设是纯 base64
-      imageBuffer = Buffer.from(image, 'base64');
-    }
-
-    // 将图片转换为 tensor
-    const imageTensor = tf.node.decodeImage(imageBuffer, 3);
+    // 加载图片
+    const canvas = await loadImage(image);
 
     // 进行分类
-    const predictions = await nsfwModel.classify(imageTensor);
-
-    // 清理 tensor 以释放内存
-    imageTensor.dispose();
+    const predictions = await nsfwModel.classify(canvas);
 
     // 返回结果
     res.status(200).json({
