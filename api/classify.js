@@ -10,22 +10,31 @@ async function loadModel() {
   return model;
 }
 
-// 将图片 URL 或 base64 转换为 Image 对象
+// 将图片 URL 或 base64 转换为 Canvas 对象
 async function loadImage(imageData) {
-  // 动态导入 canvas（仅在需要时加载）
-  const { createCanvas, loadImage: canvasLoadImage } = require('canvas');
+  const { createCanvas, loadImage: napiLoadImage } = require('@napi-rs/canvas');
   
   let img;
   
   if (imageData.startsWith('http://') || imageData.startsWith('https://')) {
-    // URL 格式
-    img = await canvasLoadImage(imageData);
+    // URL 格式 - 先下载图片
+    const response = await fetch(imageData);
+    if (!response.ok) {
+      throw new Error('无法获取图片');
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    img = await napiLoadImage(buffer);
   } else {
     // Base64 格式
-    const base64Data = imageData.startsWith('data:') 
-      ? imageData 
-      : `data:image/jpeg;base64,${imageData}`;
-    img = await canvasLoadImage(base64Data);
+    let base64Data;
+    if (imageData.startsWith('data:')) {
+      base64Data = imageData.split(',')[1];
+    } else {
+      base64Data = imageData;
+    }
+    const buffer = Buffer.from(base64Data, 'base64');
+    img = await napiLoadImage(buffer);
   }
   
   // 创建 canvas 并绘制图片

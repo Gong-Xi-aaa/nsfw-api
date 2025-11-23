@@ -194,8 +194,9 @@ curl -X POST https://your-domain.vercel.app/api/classify \
 - **前端框架**：原生 HTML/CSS/JavaScript
 - **UI 组件库**：Arco Design
 - **后端运行时**：Node.js（Vercel Serverless Functions）
-- **AI 模型**：NSFWJS
-- **深度学习**：TensorFlow.js
+- **图片处理**：@napi-rs/canvas（预编译版本，适配 Serverless）
+- **AI 模型**：NSFWJS v4.2.1
+- **深度学习**：TensorFlow.js v4.20.0
 
 ## 许可证
 
