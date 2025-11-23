@@ -1,11 +1,28 @@
 const tf = require('@tensorflow/tfjs');
+require('@tensorflow/tfjs-backend-cpu');
 const nsfw = require('nsfwjs');
 
 let model;
 
 async function loadModel() {
   if (!model) {
-    model = await nsfw.load();
+    try {
+      console.log('初始化 TensorFlow.js CPU 后端...');
+      // 设置 CPU 后端
+      await tf.setBackend('cpu');
+      await tf.ready();
+      console.log('后端已就绪:', tf.getBackend());
+      
+      console.log('加载 NSFW 模型...');
+      // 加载模型，使用 CDN 托管的模型
+      model = await nsfw.load('https://nsfw-demo.s3.amazonaws.com/model/', {
+        size: 299
+      });
+      console.log('模型加载成功');
+    } catch (error) {
+      console.error('模型加载失败:', error);
+      throw new Error(`模型加载失败: ${error.message}`);
+    }
   }
   return model;
 }

@@ -12,6 +12,7 @@
   "dependencies": {
     "@napi-rs/canvas": "^0.1.58",
     "@tensorflow/tfjs": "^4.20.0",
+    "@tensorflow/tfjs-backend-cpu": "^4.20.0",
     "buffer": "^6.0.3",
     "nsfwjs": "^4.2.1"
   },
