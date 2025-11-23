@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="AI 智能图片内容检测工具，支持 NSFW 内容识别">
+    <meta name="theme-color" content="#667eea">
+    <title>NSFW 图片检测 API - AI 智能识别</title>
+    <!-- Arco Design CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/@arco-design/web-react@2.62.0/dist/css/arco.css">
+    <!-- Arco Design Icon -->
+    <link rel="stylesheet" href="https://unpkg.com/@arco-iconbox/react-icon-sun/dist/css/arco-icon.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* 背景动画气泡 */
+        body::before,
+        body::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            animation: float 20s infinite ease-in-out;
+        }
+
+        body::before {
+            width: 300px;
+            height: 300px;
+            top: -150px;
+            left: -150px;
+            animation-delay: 0s;
+        }
+
+        body::after {
+            width: 200px;
+            height: 200px;
+            bottom: -100px;
+            right: -100px;
+            animation-delay: 5s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(50px, 50px) scale(1.1); }
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 800px;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .arco-card {
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 
+                        0 0 0 1px rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .arco-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15),
+                        0 0 0 1px rgba(255, 255, 255, 0.2);
+        }
+
+        .preview-container {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+            border-radius: 12px;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 2px dashed transparent;
+        }
+
+        .preview-container.has-image {
+            background: linear-gradient(135deg, #ffffff 0%, #f5f7fa 100%);
+            border-color: var(--color-primary-6);
+        }
+
+        .preview-container img {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            animation: fadeIn 0.5s ease-out;
+            transition: transform 0.3s ease;
+        }
+
+        .preview-container img:hover {
+            transform: scale(1.02);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .preview-empty {
+            color: var(--color-text-3);
+            font-size: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .preview-empty-icon {
+            font-size: 48px;
+            opacity: 0.5;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .result-card {
+            margin-bottom: 12px;
+            animation: slideInRight 0.4s ease-out;
+            animation-fill-mode: both;
+        }
+
+        .result-card:nth-child(1) { animation-delay: 0.1s; }
+        .result-card:nth-child(2) { animation-delay: 0.2s; }
+        .result-card:nth-child(3) { animation-delay: 0.3s; }
+        .result-card:nth-child(4) { animation-delay: 0.4s; }
+        .result-card:nth-child(5) { animation-delay: 0.5s; }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .result-card .arco-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .result-card .arco-card:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        }
+
+        .result-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .class-name {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .progress-wrapper {
+            flex: 1;
+            margin: 0 20px;
+        }
+
+        .arco-progress-line-inner-bg {
+            transition: width 1s ease-out, background-color 0.3s ease;
+        }
+
+        .probability-text {
+            font-size: 18px;
+            font-weight: 700;
+            min-width: 80px;
+            text-align: right;
+            animation: countUp 1s ease-out;
+        }
+
+        @keyframes countUp {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .icon-safe { color: #00b42a; }
+        .icon-warning { color: #ff7d00; }
+        .icon-danger { color: #f53f3f; }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 28px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-icon {
+            font-size: 32px;
+            animation: rotate 3s linear infinite;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .divider-text {
+            margin: 24px 0;
+        }
+
+        .feature-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .feature-tag:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+        }
+
+        .arco-input {
+            transition: all 0.3s ease;
+        }
+
+        .arco-input:focus {
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .arco-upload-drag {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px dashed var(--color-border-2);
+        }
+
+        .arco-upload-drag:hover {
+            border-color: var(--color-primary-6);
+            background: var(--color-fill-1);
+            transform: translateY(-2px);
+        }
+
+        .arco-upload-drag-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            animation: swing 2s ease-in-out infinite;
+        }
+
+        @keyframes swing {
+            0%, 100% { transform: rotate(-3deg); }
+            50% { transform: rotate(3deg); }
+        }
+
+        .arco-btn {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .arco-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .arco-btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .arco-btn:not(:disabled):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .arco-btn:not(:disabled):active {
+            transform: translateY(0);
+        }
+
+        .arco-alert {
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+        }
+
+        .footer-text {
+            text-align: center;
+            margin-top: 24px;
+            color: rgba(255,255,255,0.9);
+            font-size: 14px;
+            animation: fadeIn 1s ease-out 0.5s both;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .footer-text::before {
+            content: '✨ ';
+        }
+
+        .footer-text::after {
+            content: ' ✨';
+        }
+
+        /* 加载动画 */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .arco-btn-loading .arco-btn-text {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        /* 桌面端大屏幕优化 */
+        @media (min-width: 1200px) {
+            .app-container {
+                max-width: 900px;
+            }
+
+            .arco-card-body {
+                padding: 48px !important;
+            }
+
+            .header-title {
+                font-size: 32px;
+            }
+
+            .preview-container {
+                min-height: 250px;
+            }
+
+            .preview-container img {
+                max-height: 500px;
+            }
+        }
+
+        /* 平板横屏 */
+        @media (min-width: 768px) and (max-width: 1199px) {
+            .app-container {
+                max-width: 750px;
+            }
+
+            .arco-card-body {
+                padding: 36px !important;
+            }
+        }
+
+        /* 平板竖屏和大屏手机 */
+        @media (max-width: 767px) {
+            body {
+                align-items: flex-start;
+                padding-top: 20px;
+            }
+
+            body::before,
+            body::after {
+                display: none;
+            }
+
+            .app-container {
+                padding: 12px;
+                animation: none;
+            }
+
+            .arco-card {
+                border-radius: 12px;
+            }
+
+            .arco-card:hover {
+                transform: none;
+            }
+
+            .arco-card-body {
+                padding: 24px 16px !important;
+            }
+
+            .header-title {
+                font-size: 22px;
+                gap: 8px;
+            }
+
+            .header-icon {
+                font-size: 26px;
+            }
+
+            .preview-container {
+                margin: 16px 0;
+                padding: 16px;
+                min-height: 180px;
+            }
+
+            .preview-container img {
+                max-height: 300px;
+            }
+
+            .arco-input-wrapper input {
+                font-size: 16px;
+            }
+
+            .arco-upload-drag {
+                padding: 20px;
+            }
+
+            .arco-upload-drag-icon {
+                font-size: 36px;
+            }
+
+            .arco-upload-drag-text {
+                font-size: 14px;
+            }
+
+            .arco-upload-drag-text-tips {
+                font-size: 12px;
+            }
+
+            .result-content {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .result-content > div:first-child {
+                justify-content: center;
+            }
+
+            .progress-wrapper {
+                width: 100%;
+                margin: 8px 0;
+            }
+
+            .probability-text {
+                width: 100%;
+                text-align: center;
+                font-size: 20px;
+            }
+
+            .class-name {
+                font-size: 15px;
+            }
+
+            .arco-btn {
+                height: 48px;
+                font-size: 16px;
+            }
+
+            .footer-text {
+                font-size: 12px;
+                margin-top: 16px;
+            }
+
+            .divider-text {
+                margin: 16px 0;
+            }
+        }
+
+        /* 小屏手机 */
+        @media (max-width: 480px) {
+            .app-container {
+                padding: 8px;
+            }
+
+            .arco-card {
+                border-radius: 8px;
+            }
+
+            .arco-card-body {
+                padding: 20px 12px !important;
+            }
+
+            .header-title {
+                font-size: 20px;
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .preview-container {
+                margin: 12px 0;
+                padding: 12px;
+                min-height: 150px;
+            }
+
+            .preview-empty-icon {
+                font-size: 36px;
+            }
+
+            .result-card .arco-card-body {
+                padding: 12px !important;
+            }
+
+            .class-name {
+                font-size: 14px;
+            }
+
+            .probability-text {
+                font-size: 18px;
+            }
+
+            .footer-text {
+                font-size: 11px;
+            }
+        }
+
+        /* 横屏模式优化 */
+        @media (max-height: 600px) and (orientation: landscape) {
+            body {
+                align-items: flex-start;
+                padding: 10px 0;
+            }
+
+            .app-container {
+                padding: 10px 20px;
+            }
+
+            .arco-card-body {
+                padding: 20px !important;
+            }
+
+            .header-title {
+                font-size: 20px;
+                margin-bottom: 4px !important;
+            }
+
+            .preview-container {
+                margin: 12px 0;
+                min-height: 120px;
+            }
+
+            .preview-container img {
+                max-height: 200px;
+            }
+
+            .divider-text {
+                margin: 12px 0;
+            }
+
+            .arco-btn {
+                height: 40px;
+                margin-bottom: 12px !important;
+            }
+
+            .result-card {
+                margin-bottom: 8px;
+            }
+
+            .footer-text {
+                margin-top: 12px;
+            }
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        /* 触摸反馈优化 */
+        @media (hover: none) and (pointer: coarse) {
+            .arco-card:hover {
+                transform: none;
+            }
+
+            .arco-card:active {
+                transform: scale(0.98);
+            }
+
+            .arco-btn:not(:disabled):hover {
+                transform: none;
+            }
+
+            .arco-btn:not(:disabled):active {
+                transform: scale(0.98);
+            }
+
+            .arco-upload-drag:hover {
+                transform: none;
+            }
+
+            .arco-upload-drag:active {
+                transform: scale(0.99);
+            }
+
+            .feature-tag:hover {
+                transform: none;
+            }
+
+            .feature-tag:active {
+                transform: scale(0.95);
+            }
+        }
+
+        /* 加载骨架屏 */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s ease-in-out infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* 提示工具 */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            font-size: 12px;
+            border-radius: 4px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            margin-bottom: 5px;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+        }
+
+        /* 状态徽章 */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            background: #f53f3f;
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+
+        .badge-success {
+            background: #00b42a;
+        }
+
+        .badge-warning {
+            background: #ff7d00;
+        }
+
+        .badge-info {
+            background: #165dff;
+        }
+
+        /* 打字机效果 */
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+
+        /* 安全着陆动画 */
+        @keyframes safeLanding {
+            0% {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.8);
+            }
+            50% {
+                transform: translateY(5px) scale(1.02);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* 成功检查标记动画 */
+        @keyframes checkmark {
+            0% {
+                stroke-dashoffset: 100;
+            }
+            100% {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        /* 优化图片加载占位 */
+        .preview-container.loading {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s ease-in-out infinite;
+        }
+
+        /* 暗色模式支持（可选） */
+        @media (prefers-color-scheme: dark) {
+            /* 如果需要支持暗色模式，可以在这里添加样式 */
+        }
+
+        /* 减少动画（无障碍支持） */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* 性能优化 */
+        .arco-card,
+        .result-card,
+        .preview-container img {
+            will-change: transform;
+        }
+
+        /* 移除性能优化提示 */
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container" id="app">
+        <div class="arco-card">
+            <div class="arco-card-body" style="padding: 32px;">
+                <!-- 标题 -->
+                <div class="header-title" style="margin-bottom: 8px;">
+                    <span class="header-icon">🔍</span>
+                    <span>NSFW 图片检测</span>
+                </div>
+                <div style="color: var(--color-text-3); margin-bottom: 24px; font-size: 14px; line-height: 1.6;">
+                    <div style="margin-bottom: 8px;">使用 AI 技术智能检测图片内容分类</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;">
+                        <span class="feature-tag">✅ 快速识别</span>
+                        <span class="feature-tag">🎯 精准分类</span>
+                        <span class="feature-tag">🔒 隐私安全</span>
+                    </div>
+                </div>
+
+                <!-- URL 输入 -->
+                <div class="arco-form-item" style="margin-bottom: 20px;">
+                    <label class="arco-form-item-label-col">
+                        <div class="arco-form-item-label-col-label">图片 URL</div>
+                    </label>
+                    <div class="arco-input-wrapper" style="width: 100%;">
+                        <input 
+                            id="imageUrl" 
+                            class="arco-input arco-input-size-default" 
+                            placeholder="输入图片链接，例如：https://example.com/image.jpg"
+                            type="text"
+                        >
+                    </div>
+                </div>
+
+                <!-- 分割线 -->
+                <div class="arco-divider arco-divider-horizontal divider-text">
+                    <span class="arco-divider-text">或</span>
+                </div>
+
+                <!-- 上传文件 -->
+                <div class="arco-form-item" style="margin-bottom: 24px;">
+                    <label class="arco-form-item-label-col">
+                        <div class="arco-form-item-label-col-label">上传图片</div>
+                    </label>
+                    <div class="arco-upload arco-upload-type-drag" style="width: 100%;">
+                        <div class="arco-upload-list arco-upload-list-type-picture-card"></div>
+                        <div class="arco-upload-drag">
+                            <div class="arco-upload-drag-icon">📁</div>
+                            <div class="arco-upload-drag-text">点击或拖拽文件到此处上传</div>
+                            <div class="arco-upload-drag-text-tips">支持 jpg、png、gif 等图片格式 / 支持 Ctrl+V 粘贴</div>
+                            <input type="file" id="imageFile" accept="image/*" style="display: none;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 预览区域 -->
+                <div class="preview-container" id="preview">
+                    <div class="preview-empty">
+                        <div class="preview-empty-icon">🖼️</div>
+                        <div>暂无图片预览</div>
+                    </div>
+                </div>
+
+                <!-- 检测按钮 -->
+                <button 
+                    id="classifyBtn" 
+                    class="arco-btn arco-btn-primary arco-btn-size-large arco-btn-long"
+                    style="margin-bottom: 20px;"
+                >
+                    <span class="arco-btn-text">开始检测</span>
+                </button>
+
+                <!-- 加载提示 -->
+                <div id="loadingAlert" style="display: none; margin-bottom: 20px;">
+                    <div class="arco-alert arco-alert-info">
+                        <div class="arco-alert-content">
+                            <div class="arco-alert-content-title">
+                                <span class="arco-icon-loading" style="margin-right: 8px;">⏳</span>
+                                正在分析图片，请稍候...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 错误提示 -->
+                <div id="errorAlert" style="display: none; margin-bottom: 20px;"></div>
+
+                <!-- 结果展示 -->
+                <div id="results" style="display: none;">
+                    <div class="arco-divider arco-divider-horizontal" style="margin: 24px 0;">
+                        <span class="arco-divider-text">检测结果</span>
+                    </div>
+                    <div id="resultsList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 页脚 -->
+        <div class="footer-text">
+            Powered by NSFWJS · Designed with Arco Design
+        </div>
+    </div>
+
+    <script>
+        const imageUrlInput = document.getElementById('imageUrl');
+        const imageFileInput = document.getElementById('imageFile');
+        const uploadDrag = document.querySelector('.arco-upload-drag');
+        const previewDiv = document.getElementById('preview');
+        const resultsDiv = document.getElementById('results');
+        const resultsListDiv = document.getElementById('resultsList');
+        const errorAlertDiv = document.getElementById('errorAlert');
+        const loadingAlertDiv = document.getElementById('loadingAlert');
+        const classifyBtn = document.getElementById('classifyBtn');
+
+        let currentImage = null;
+        let isProcessing = false;
+
+        // 防抖函数
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // 验证 URL 格式
+        function isValidUrl(string) {
+            try {
+                const url = new URL(string);
+                return url.protocol === 'http:' || url.protocol === 'https:';
+            } catch (_) {
+                return false;
+            }
+        }
+
+        // 上传区域点击事件
+        uploadDrag.addEventListener('click', () => imageFileInput.click());
+
+        // URL 输入事件（带防抖）
+        const handleUrlInput = debounce(function() {
+            const url = imageUrlInput.value.trim();
+            if (url) {
+                if (isValidUrl(url)) {
+                    currentImage = url;
+                    hideError();
+                    showPreview(url);
+                } else {
+                    showError('请输入有效的图片链接地址');
+                }
+            } else {
+                previewDiv.classList.remove('has-image', 'loading');
+                previewDiv.innerHTML = '<div class="preview-empty"><div class="preview-empty-icon">🖼️</div><div>暂无图片预览</div></div>';
+                currentImage = null;
+            }
+        }, 500);
+
+        imageUrlInput.addEventListener('input', handleUrlInput);
+
+        // 文件上传事件
+        imageFileInput.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+                imageUrlInput.value = '';
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentImage = e.target.result;
+                    showPreview(e.target.result);
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+
+        // 拖拽上传
+        uploadDrag.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadDrag.style.borderColor = 'var(--color-primary-6)';
+        });
+
+        uploadDrag.addEventListener('dragleave', () => {
+            uploadDrag.style.borderColor = '';
+        });
+
+        uploadDrag.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadDrag.style.borderColor = '';
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                imageUrlInput.value = '';
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentImage = e.target.result;
+                    showPreview(e.target.result);
+                };
+                reader.readAsDataURL(files[0]);
+            }
+        });
+
+        function showPreview(src) {
+            // 显示加载状态
+            previewDiv.classList.add('loading');
+            previewDiv.innerHTML = '<div class="preview-empty"><div class="preview-empty-icon">⏳</div><div>图片加载中...</div></div>';
+            
+            // 创建图片对象进行预加载
+            const img = new Image();
+            img.onload = function() {
+                previewDiv.classList.remove('loading');
+                previewDiv.innerHTML = `<img src="${src}" alt="Preview" style="object-fit: contain;">`;
+                previewDiv.classList.add('has-image');
+            };
+            img.onerror = function() {
+                previewDiv.classList.remove('loading');
+                previewDiv.innerHTML = '<div class="preview-empty"><div class="preview-empty-icon">❌</div><div>图片加载失败</div></div>';
+                showError('图片加载失败，请检查链接是否正确');
+            };
+            img.src = src;
+        }
+
+        // 检测按钮点击
+        classifyBtn.addEventListener('click', classifyImage);
+
+        // 键盘支持 - 按回车键提交
+        imageUrlInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && currentImage && !isProcessing) {
+                classifyImage();
+            }
+        });
+
+        // 粘贴图片支持
+        document.addEventListener('paste', function(e) {
+            const items = e.clipboardData?.items;
+            if (!items) return;
+
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imageUrlInput.value = '';
+                        currentImage = e.target.result;
+                        showPreview(e.target.result);
+                        
+                        // 显示成功提示
+                        showToast('✅ 图片已粘贴成功');
+                    };
+                    reader.readAsDataURL(blob);
+                    e.preventDefault();
+                    break;
+                }
+            }
+        });
+
+        // 显示临时提示
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0, 0, 0, 0.8);
+                color: white;
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-size: 14px;
+                z-index: 9999;
+                animation: slideDown 0.3s ease-out;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideUp 0.3s ease-out';
+                setTimeout(() => toast.remove(), 300);
+            }, 2000);
+        }
+
+        async function classifyImage() {
+            // 防止重复提交
+            if (isProcessing) {
+                return;
+            }
+
+            if (!currentImage) {
+                showError('请先提供图片 URL 或上传图片');
+                return;
+            }
+
+            isProcessing = true;
+            hideError();
+            hideResults();
+            showLoading();
+            classifyBtn.disabled = true;
+            classifyBtn.classList.add('arco-btn-loading');
+
+            const startTime = Date.now();
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+
+                const response = await fetch('/api/classify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image: currentImage
+                    }),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || '检测失败');
+                }
+
+                // 计算处理时间
+                const processingTime = ((Date.now() - startTime) / 1000).toFixed(2);
+                console.log(`检测完成，耗时: ${processingTime}秒`);
+
+                showResults(data.predictions, processingTime);
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    showError('请求超时，请稍后重试');
+                } else {
+                    showError(error.message || '网络请求失败，请检查图片链接或稍后重试');
+                }
+                console.error('检测错误:', error);
+            } finally {
+                hideLoading();
+                classifyBtn.disabled = false;
+                classifyBtn.classList.remove('arco-btn-loading');
+                isProcessing = false;
+            }
+        }
+
+        function showResults(predictions, processingTime) {
+            // 按概率排序
+            predictions.sort((a, b) => b.probability - a.probability);
+
+            const classNameMap = {
+                'Neutral': { label: '正常内容', icon: '✅', color: 'green' },
+                'Drawing': { label: '绘画/插画', icon: '🎨', color: 'blue' },
+                'Sexy': { label: '性感内容', icon: '⚠️', color: 'orange' },
+                'Hentai': { label: '成人动画', icon: '🔞', color: 'red' },
+                'Porn': { label: '色情内容', icon: '❌', color: 'red' }
+            };
+
+            // 获取最高概率的分类
+            const topPrediction = predictions[0];
+            const isRisky = topPrediction.probability > 0.5 && ['Sexy', 'Hentai', 'Porn'].includes(topPrediction.className);
+
+            const html = predictions.map(pred => {
+                const info = classNameMap[pred.className] || { label: pred.className, icon: '📊', color: 'gray' };
+                const percentage = (pred.probability * 100).toFixed(2);
+                const progressColor = percentage > 50 ? 'var(--color-danger-6)' : 
+                                    percentage > 20 ? 'var(--color-warning-6)' : 
+                                    'var(--color-success-6)';
+                
+                return `
+                    <div class="result-card">
+                        <div class="arco-card" style="border-left-color: ${progressColor};">
+                            <div class="arco-card-body">
+                                <div class="result-content">
+                                    <div style="display: flex; align-items: center; gap: 12px; min-width: 150px;">
+                                        <span style="font-size: 24px;">${info.icon}</span>
+                                        <span class="class-name">${info.label}</span>
+                                    </div>
+                                    <div class="progress-wrapper">
+                                        <div class="arco-progress arco-progress-line arco-progress-size-default">
+                                            <div class="arco-progress-line-wrapper">
+                                                <div class="arco-progress-line-outer" style="height: 12px; border-radius: 6px;">
+                                                    <div class="arco-progress-line-inner">
+                                                        <div class="arco-progress-line-inner-bg" style="width: ${percentage}%; background-color: ${progressColor};"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="probability-text" style="color: ${progressColor};">
+                                        ${percentage}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // 添加检测摘要
+            const summaryHtml = `
+                <div class="arco-alert arco-alert-${isRisky ? 'warning' : 'success'}" style="margin-bottom: 20px; animation: safeLanding 0.6s ease-out;">
+                    <div class="arco-alert-icon-wrapper">
+                        <span class="arco-alert-icon" style="font-size: 20px;">${isRisky ? '⚠️' : '✅'}</span>
+                    </div>
+                    <div class="arco-alert-content">
+                        <div class="arco-alert-content-title">
+                            ${isRisky ? '检测到潜在风险内容' : '未检测到明显风险'}
+                        </div>
+                        <div class="arco-alert-content-body" style="margin-top: 4px; font-size: 13px;">
+                            主要分类：${classNameMap[topPrediction.className].label} (${(topPrediction.probability * 100).toFixed(2)}%)
+                            ${processingTime ? `<span style="margin-left: 12px;">⚡ 耗时: ${processingTime}s</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            resultsListDiv.innerHTML = summaryHtml + html;
+            resultsDiv.style.display = 'block';
+
+            // 滚动到结果区域
+            setTimeout(() => {
+                resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+        }
+
+        function showError(message) {
+            errorAlertDiv.innerHTML = `
+                <div class="arco-alert arco-alert-error">
+                    <div class="arco-alert-icon-wrapper">
+                        <span class="arco-alert-icon">⚠️</span>
+                    </div>
+                    <div class="arco-alert-content">
+                        <div class="arco-alert-content-title">${message}</div>
+                    </div>
+                </div>
+            `;
+            errorAlertDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            errorAlertDiv.style.display = 'none';
+        }
+
+        function hideResults() {
+            resultsDiv.style.display = 'none';
+        }
+
+        function showLoading() {
+            loadingAlertDiv.style.display = 'block';
+        }
+
+        function hideLoading() {
+            loadingAlertDiv.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
